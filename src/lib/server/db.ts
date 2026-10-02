@@ -1,7 +1,10 @@
 import "server-only";
 
 import { type Client, createClient } from "@libsql/client";
-import { resolveServerDatabaseConfig } from "@/lib/server/database-config";
+import {
+  fileDatabaseOptions,
+  resolveServerDatabaseConfig,
+} from "@/lib/server/database-config";
 import { assertSchemaReady } from "@/lib/server/schema-readiness";
 
 interface PublicDatabaseState {
@@ -38,6 +41,7 @@ const state = globalDatabase.__sppgPublicDatabase;
  * menjalankan build ini sudah menyetelnya?".
  */
 export interface AlamatDatabaseEnvironment {
+  KOS_DATABASE_URL?: string;
   TURSO_DATABASE_URL?: string;
   SPPG_DATABASE_URL?: string;
 }
@@ -49,7 +53,8 @@ export function alamatDatabaseTersetel(
   environment: AlamatDatabaseEnvironment = process.env as AlamatDatabaseEnvironment,
 ): boolean {
   return Boolean(
-    environment.TURSO_DATABASE_URL?.trim() ||
+    environment.KOS_DATABASE_URL?.trim() ||
+      environment.TURSO_DATABASE_URL?.trim() ||
       environment.SPPG_DATABASE_URL?.trim(),
   );
 }
@@ -60,6 +65,9 @@ export function getPublicDatabase(): Client {
     state.client = createClient({
       url: config.url,
       authToken: config.authToken,
+      // Berkas SQLite dibagi dengan aplikasi admin; tanpa waktu tunggu,
+      // pendaftaran PMB yang bertabrakan dengan tulisan admin langsung gagal.
+      ...fileDatabaseOptions(config),
     });
   }
 
